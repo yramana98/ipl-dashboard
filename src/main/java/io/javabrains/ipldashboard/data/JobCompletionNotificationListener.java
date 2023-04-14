@@ -3,9 +3,9 @@ package io.javabrains.ipldashboard.data;
 import java.util.HashMap;
 import java.util.Map;
 
-import javax.persistence.EntityManager;
-import javax.transaction.Transactional;
 
+import jakarta.persistence.EntityManager;
+import jakarta.transaction.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.batch.core.BatchStatus;

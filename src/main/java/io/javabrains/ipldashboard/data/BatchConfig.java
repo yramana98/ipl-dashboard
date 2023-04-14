@@ -7,7 +7,10 @@ import org.springframework.batch.core.Step;
 import org.springframework.batch.core.configuration.annotation.EnableBatchProcessing;
 import org.springframework.batch.core.configuration.annotation.JobBuilderFactory;
 import org.springframework.batch.core.configuration.annotation.StepBuilderFactory;
+import org.springframework.batch.core.job.builder.JobBuilder;
 import org.springframework.batch.core.launch.support.RunIdIncrementer;
+import org.springframework.batch.core.repository.JobRepository;
+import org.springframework.batch.core.step.builder.StepBuilder;
 import org.springframework.batch.item.database.BeanPropertyItemSqlParameterSourceProvider;
 import org.springframework.batch.item.database.JdbcBatchItemWriter;
 import org.springframework.batch.item.database.builder.JdbcBatchItemWriterBuilder;
@@ -20,6 +23,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.ClassPathResource;
 
 import io.javabrains.ipldashboard.model.Match;
+import org.springframework.transaction.PlatformTransactionManager;
 
 @Configuration
 @EnableBatchProcessing
@@ -29,11 +33,6 @@ public class BatchConfig {
             "neutral_venue", "team1", "team2", "toss_winner", "toss_decision", "winner", "result", "result_margin",
             "eliminator", "method", "umpire1", "umpire2" };
 
-    @Autowired
-    public JobBuilderFactory jobBuilderFactory;
-
-    @Autowired
-    public StepBuilderFactory stepBuilderFactory;
 
     @Bean
     public FlatFileItemReader<MatchInput> reader() {
@@ -61,24 +60,24 @@ public class BatchConfig {
     }
 
     @Bean
-    public Job importUserJob(JobCompletionNotificationListener listener, Step step1) {
-        return jobBuilderFactory
-            .get("importUserJob")
-            .incrementer(new RunIdIncrementer())
-            .listener(listener)
-            .flow(step1)
-            .end()
-            .build();
+    public Job importUserJob(JobRepository jobRepository,
+                             JobCompletionNotificationListener listener, Step step1) {
+        return new JobBuilder("importUserJob", jobRepository)
+                .incrementer(new RunIdIncrementer())
+                .listener(listener)
+                .flow(step1)
+                .end()
+                .build();
     }
 
     @Bean
-    public Step step1(JdbcBatchItemWriter<Match> writer) {
-        return stepBuilderFactory
-            .get("step1")
-            .<MatchInput, Match>chunk(10)
-            .reader(reader())
-            .processor(processor())
-            .writer(writer)
-            .build();
+    public Step step1(JobRepository jobRepository,
+                      PlatformTransactionManager transactionManager, JdbcBatchItemWriter<Match> writer) {
+        return new StepBuilder("step1", jobRepository)
+                .<MatchInput, Match> chunk(10, transactionManager)
+                .reader(reader())
+                .processor(processor())
+                .writer(writer)
+                .build();
     }
 }
